@@ -1,0 +1,96 @@
+<!--
+Ant build file for UCADF-Core-Plugin
+Command-Line Properties:
+
+-->
+<project name="UCADF-Core-Plugin" default="main" basedir="./UCADF-Plugins">
+
+	<dirname property="example" file="${ant.file.example}" />
+	<dirname property="workspace" file="${example}" />
+
+	<!-- assumes the build.properties is set via the command line ANT invocation -->
+	<property name="build.properties" value="build.properties" />
+	<property file="${workspace}/builder/ant-common/${build.properties}" />
+
+	<property name="project" value="" />
+
+	<property name="scripts.dir" value="${basedir}/scripts" />
+	<property name="build.dir" value="${basedir}/build" />
+	<property name="plugin.dir" value="${basedir}/plugin" />
+	<property name="license.dir" value="${basedir}/license" />
+	<property name="doc.dir" value="${basedir}/doc" />
+	<property name="bin.dir" value="${basedir}/bin" />
+	<property name="imports.dir" value="${basedir}/imports" />
+	<property name="releases.dir" value="${basedir}/releases" />
+
+	<property name="deployPluginArchiveName" value="${releases.dir}/UCADF-Core-Plugin-v${UCADF_PLUGIN_VERSION}.zip" />
+
+	<target name="main" depends="deleteBuildDirs, copyDependencies, buildZip" />
+	
+	<!-- Copy in the dependencies -->
+	<target name="copyDependencies">
+
+		<!-- inputs (info, upgrade) -->
+		<copy todir="${build.dir}">
+			<fileset dir="${plugin.dir}">
+			</fileset>
+		</copy>
+
+		<!-- Replace version variables in configuration files -->
+		<replace dir="${build.dir}" value="${UCADF_PLUGIN_VERSION}">
+			<include name="**/*.xml"/>
+			<replacetoken>@UCADF_PLUGIN_VERSION@</replacetoken>
+		</replace>
+		<replace dir="${build.dir}" value="${UCADF_PLUGIN_INSTALL_VERSION}">
+			<include name="**/*.xml"/>
+			<replacetoken>@UCADF_PLUGIN_INSTALL_VERSION@</replacetoken>
+		</replace>
+					
+		<mkdir dir="${build.dir}/bin"/>
+		
+		<copy todir="${build.dir}">
+			<fileset dir="${scripts.dir}/..">					
+				<include name="scripts/**/*"/>
+			</fileset>
+		</copy>
+		
+		<mkdir dir="${build.dir}/license"/>
+		<!-- copy license -->
+		<copy todir="${build.dir}/license">
+			<fileset dir="${license.dir}">
+				<include name="EPL.txt" />
+			</fileset>
+		</copy>
+
+		<mkdir dir="${build.dir}/imports"/>
+		<!-- copy license -->
+		<copy todir="${build.dir}/imports">
+			<fileset dir="${imports.dir}">
+			</fileset>
+		</copy>
+		
+		<mkdir dir="${build.dir}/doc"/>
+		<!-- copy license -->
+		<copy todir="${build.dir}/doc">
+			<fileset dir="${doc.dir}">
+				<include name="HowTo.html" />
+			</fileset>
+		</copy>
+		
+		<mkdir dir="${build.dir}/java"/>
+						
+		<mkdir dir="${releases.dir}"/>
+	</target>
+
+	<!-- Build the actual zip file that gets uploaded to UCD -->
+	<target name="buildZip">
+		<zip destfile="${deployPluginArchiveName}" basedir="${build.dir}" update="false"/>
+	</target>
+
+	<!-- Remove the build and release directories. -->
+	<target name="deleteBuildDirs">
+		<delete dir="build" />
+		<delete dir="releases" />
+	</target>
+
+</project>
