@@ -1,0 +1,103 @@
+#!/bin/sh
+# This script is called by the UCADF-Core plugin UcAdfCorePluginInit script to run actions.
+# It parses the package version spec and processes each directory collecting information from their configuration files.
+
+# Safe scripting practice.
+set -eu -o pipefail
+
+# Get the standard input as a property. This is needed pass the UCD secret value needed to decrypt the properties file.
+STDIN="$(</dev/stdin)"
+
+# Get the location of this script.
+scriptPath=`readlink -f "$0"`
+scriptDir=`dirname "$scriptPath"`
+
+# Command line arguments.
+packageVersions=$1
+inPropsFile=$2
+outPropsFile=$3
+
+# Start with an empty values.
+ucAdfFullClasspath=""
+log4jConfig=""
+
+# Parse the provided specifications into an array.
+# Format: <packageName>:<packageVersion>[,...]
+echo "Running $0"
+echo "packageVersions=[${packageVersions}]"
+packageVersionsArr=$(echo $packageVersions | tr "," "\n")
+
+# The location of the package versions.
+packageVersionsDir="${AGENT_HOME}/var/work/UcAdfCorePluginDownloads"
+
+# The location of the agent libraries.
+agentLibDir="${AGENT_HOME}/lib"
+
+# Process each package version.
+for packageVersionSpec in $packageVersionsArr
+do
+	# Get the package name from the package version specification.
+	ucAdfPackageName=$(echo $packageVersionSpec | cut -d':' -f1)
+	if [ -z "${ucAdfPackageName}" ]; then
+		echo "Invalid package name specified in packageVersions."
+		exit 1
+	fi
+	
+	# Get the package version from the package version specification.
+	ucAdfPackageVersion=$(echo $packageVersionSpec | cut -d':' -f2)
+	if [ -z "${ucAdfPackageVersion}" ]; then
+		echo "Invalid version specified in packageVersions."
+		exit 1
+	fi
+	
+	# The location of the package version files.
+	ucAdfPackageDir="${packageVersionsDir}/${ucAdfPackageName}/${ucAdfPackageVersion}"
+	ucAdfPackageLog4jFile="${ucAdfPackageDir}/log4j.properties"
+	ucAdfPackageConfigFile="${ucAdfPackageDir}/UcAdfConfig.properties"
+
+	echo "Looking for UCADF configuration files in [${ucAdfPackageDir}]."
+	
+	# The library is added to the classpath by using the information provided in the library's UcAdfConfig.properties file.		
+	if [ -f "$ucAdfPackageConfigFile" ]; then
+		ucAdfClasspath=""
+
+		# Source the configuration file located in the package version directory.
+		source "${ucAdfPackageConfigFile}" "${ucAdfPackageDir}"
+
+		# Append the classpath value from the configuration file.
+		if [ ! -z "${ucAdfClasspath}" ]; then
+			echo "Appending to ucAdfFullClasspath ${ucAdfClasspath} from file [$ucAdfPackageConfigFile]"
+			if [ -z "${ucAdfFullClasspath}" ]; then
+				ucAdfFullClasspath=${ucAdfClasspath}
+			else
+				ucAdfFullClasspath=${ucAdfFullClasspath}:${ucAdfClasspath}
+			fi
+			
+            ucAdfLog4jDir=`dirname "${ucAdfClasspath}"`
+            ucAdfPackageLog4jFile="${ucAdfLog4jDir}/log4j.properties"
+		fi
+	fi
+
+	# Use the first log4j properties found.
+	if [ -f "$ucAdfPackageLog4jFile" ]; then
+		if [ -z "${log4jConfig}" ]; then
+			log4jConfig=-Dlog4j.configuration=file:"${ucAdfPackageLog4jFile}"
+		fi
+	fi
+done
+
+# If CLASSPATH is not initialized then initialize it.
+set +u
+if [ -z "${CLASSPATH}" ]; then
+	CLASSPATH="*"
+fi
+set -u
+
+# Export the constructed classpath appended with the orignial CLASSPATH.
+if [ ! -z "${ucAdfFullClasspath}" ]; then
+	export CLASSPATH="${ucAdfFullClasspath}:${CLASSPATH}:${agentLibDir}/*"
+fi
+
+# Run the actions.
+echo $JAVA_HOME/bin/java $log4jConfig -cp "${CLASSPATH}" org.urbancode.ucadf.core.actionsrunner.plugin.UcAdfPluginActionsRunner "${packageVersionsDir}" "${packageVersions}" "$inPropsFile" "$outPropsFile"
+echo "${STDIN}" | $JAVA_HOME/bin/java $log4jConfig -cp "${CLASSPATH}" org.urbancode.ucadf.core.actionsrunner.plugin.UcAdfPluginActionsRunner "${packageVersionsDir}" "${packageVersions}" "$inPropsFile" "$outPropsFile"

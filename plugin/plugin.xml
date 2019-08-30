@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<plugin xmlns="http://www.urbancode.com/PluginXMLSchema_v1" xmlns:server="http://www.urbancode.com/PluginServerXMLSchema_v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <!--
+  Change the version value to the next sequence number if anything other than script changes are made.
+  Change the release-version value in the info.xml file any time the plugin is changed.
+  Change the version in the build.xml file to generate the appropriate zip file name.
+  -->
+  <header>
+    <identifier id="org.urbancode.ucadf.core.plugin" name="UCADF Core" version="@UCADF_PLUGIN_INSTALL_VERSION@"/>
+    <description>
+      UrbanCode Application Deployment Framework (UCADF) Plugin
+	  </description>
+    <tag>UCADF</tag>
+  </header>
+
+  <step-type name="Run UCADF Actions">
+    <description>Run a set of UCADF actions.</description>
+    <properties>
+      <property name="actionsText" required="false">
+          <property-ui description="Text defining actions to run." label="Actions Text" type="textAreaBox"/>
+      </property>
+      <property name="packageVersions" required="true">
+        <property-ui default-value="${p:UCADF-Core-Package-Versions}" description="Package versions to be downloaded and used by the plugin. Format: &lt;packageName&gt;:&lt;packageVersion&gt;[,...]" label="Use UCADF Package Versions" type="textBox"/>
+      </property>
+      <property name="dlCommand" required="true">
+        <property-ui default-value="udclient --verbose -weburl &quot;${AH_WEB_URL}&quot; -authtoken &quot;${DS_AUTH_TOKEN}&quot; downloadVersionArtifacts -component &quot;${ucAdfPackageName}&quot; -version &quot;${ucAdfPackageVersion}&quot;" description="The command to run to download a package version." label="Download Command" type="textBox"/>
+      </property>
+    </properties>
+    <!-- This is the standard post processing script. It sets the step to Success if the exit code
+    of the process was 0. Otherwise, the step fails. In order for a step to run correctly, it must
+    have a post processing script and that post processing script must set the status property
+    based off of the exit code. -->
+    <post-processing><![CDATA[
+        if (properties.get("exitCode") != 0) {
+            properties.put(new java.lang.String("Status"), new java.lang.String("Failure"));
+        }
+        else {
+            properties.put("Status", "Success");
+        }
+     ]]></post-processing>
+	 <command program="${PLUGIN_HOME}/scripts/UcAdfCorePluginInit">
+      <arg value="${p:packageVersions}"/>
+      <arg value="${p:dlCommand}"/>
+      <arg file="${PLUGIN_INPUT_PROPS}"/>
+      <arg file="${PLUGIN_OUTPUT_PROPS}"/>
+    </command>
+  </step-type> 
+</plugin>

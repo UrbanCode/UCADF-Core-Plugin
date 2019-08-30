@@ -1,0 +1,151 @@
+#!/bin/sh
+# This script is called by the UCADF-Core plugin to run actions.
+# It parses the package version spec and downloads those if they haven't already been downloaded.
+# As it processes each package version in order it looks for the first one that has a runner script.
+# Allowing a package to have its own runner script allows the run behavior to be customized if needed.
+
+# Safe scripting practice.
+set -eu -o pipefail
+
+# Get the standard input as a property. This is needed pass the UCD secret value needed to decrypt the properties file.
+STDIN="$(</dev/stdin)"
+
+# Command line arguments.
+packageVersions=$1
+dlCommand=$2
+inPropsFile=$3
+outPropsFile=$4
+
+# Start with an undefined runner script location.
+runnerScript=""
+
+# The runner script name.
+runnerScriptName="UcAdfCorePluginActionsRunner"
+
+# Parse the provided package version specifications into an array.
+# Format: <packageName>:<pacakgeVersion>[,...]
+echo "Running $0"
+echo "packageVersions=[${packageVersions}]"
+packageVersionsArr=$(echo $packageVersions | tr "," "\n")
+
+# The location of the package versions.
+packageVersionsDir="${AGENT_HOME}/var/work/UcAdfCorePluginDownloads"
+
+# Trap to clean up a failed download.
+cleanupDownload()
+{
+	echo "Cleaning up failed download directory $ucAdfPackageDir"
+	if [ ! -z "$ucAdfPackageDir" ];then
+		# Make sure the variable has a legitimate value.
+		echo "$ucAdfPackageDir" | grep "UcAdfCorePluginDownloads"
+		rm -rf "$ucAdfPackageDir"
+	fi
+	exit 1
+}
+
+# Create the download directory if it doesn't exist.
+if [ ! -d "$packageVersionsDir" ]; then
+	mkdir -p "$packageVersionsDir"
+fi
+
+# Create the lock file if it doesn't already exist.
+lockFile="$packageVersionsDir/.lockfile"
+if [ ! -f "$lockFile" ]; then
+	touch "$lockFile"
+fi
+
+# Exclusive lock block.
+(
+	# Exclusive lock to prevent concurrent downloads.
+	flock -w 120 200
+	
+	# Process each package version.
+	for packageVersionSpec in $packageVersionsArr
+	do
+		# Get the package name from the package version specification.
+		ucAdfPackageName=$(echo $packageVersionSpec | cut -d':' -f1)
+		if [ -z "${ucAdfPackageName}" ]; then
+			echo "Invalid package name specified in packageVersions."
+			exit 1
+		fi
+		
+		# Get the package version from the package version specification.
+		ucAdfPackageVersion=$(echo $packageVersionSpec | cut -d':' -f2)
+		if [ -z "${ucAdfPackageVersion}" ]; then
+			echo "Invalid version specified in packageVersions."
+			exit 1
+		fi
+		
+		# The location of the package version. AGENT_HOME is set by the UCD agent.
+		ucAdfPackageDir="$packageVersionsDir/${ucAdfPackageName}/${ucAdfPackageVersion}"
+	
+		echo "Looking for [${ucAdfPackageDir}]."
+		
+		# If the package version doesn't exist then download the package version .
+		if [ ! -d "${ucAdfPackageDir}" ]; then
+			echo "Downloading [${ucAdfPackageDir}]."
+		
+			# Trap to clean up a failed download directory.
+			trap cleanupDownload ERR
+	
+			# Create the package version directory and cd to it.
+			mkdir -p "${ucAdfPackageDir}"
+	
+			cd "${ucAdfPackageDir}"
+	
+			# Run the provided download command.
+			eval $dlCommand
+	
+			ls -l
+			
+			# The name of the downloaded zip file.
+			dlArtifactsZip="${ucAdfPackageName}_${ucAdfPackageVersion}_artifacts.zip"
+	
+			# unzip the downloaded package version artifacts.
+			unzip "${dlArtifactsZip}"
+			
+			ls -l
+
+            # Remove carriage returns from text files.
+            SAVEIFS=$IFS
+            IFS=$(echo -en "\n\b")
+
+            FILES=`find . -type f -exec grep -Iq . {} \; -print`
+            for f in $FILES
+            do
+                    tr -d '\r' < "$f" > "$f.tmp"
+                    rm -f "$f"
+                    mv "$f.tmp" "$f"
+            done
+            IFS=$SAVEIFS
+			
+			# Delete the downloaded zip file.
+			rm "${dlArtifactsZip}"
+	
+			cd -
+	
+			echo "Download complete."
+	
+			# Remove the download trap.
+			trap '' ERR
+		fi
+	
+		# Look for the first download that has a runner script.
+		dlRunnerScript="${ucAdfPackageDir}/$runnerScriptName"
+		if [ -z "${runnerScript}" ]; then
+			if [ -f "${dlRunnerScript}" ]; then
+				runnerScript=$dlRunnerScript
+				echo "Found runner script ${runnerScript}."
+			fi
+		fi
+	done
+) 200>"$lockFile"
+
+# Default to the runner script provided with the plugin.
+if [ -z "${runnerScript}" ]; then
+	runnerScript="$PLUGIN_HOME/scripts/${runnerScriptName}"
+fi
+
+# Invoke the runner script.
+echo "Invoking $runnerScript"
+echo "${STDIN}" | "$runnerScript" "$packageVersions" "$inPropsFile" "$outPropsFile"

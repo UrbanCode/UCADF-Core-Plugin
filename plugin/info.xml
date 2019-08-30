@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<pluginInfo xmlns="http://www.urbancode.com/InfoXMLSchema_v1" xmlns:server="http://www.urbancode.com/PluginServerXMLSchema_v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <author name="UrbanCode UCADF">
+    <organization>UrbanCode UCADF</organization>
+    <website>https://github.com/UrbanCode/UCADF-Core-Plugin</website>
+    <email/>
+    <bio/>
+  </author>
+  
+  <integration type="Deploy"/>
+  
+  <source url="UCADF-Core-plugin"/>
+  
+  <tool-description>UCADF-Core Plugin</tool-description>
+  
+  <!--
+  Change this value any time the plugin is updated.
+  Change the version value in the plugin.xml file if anything other that script changes are made.
+  Change the version in the build.xml file to generate the appropriate zip file name.
+  -->
+  <!-- This value is replaced by the Ant build. -->
+  <release-version>@UCADF_PLUGIN_VERSION@</release-version>  
+
+  <release-notes>
+  	  <!-- This value is replaced by the Ant build. -->
+	  <release-note plugin-version="@UCADF_PLUGIN_INSTALL_VERSION@">
+	  </release-note>
+  </release-notes>
+</pluginInfo>
