@@ -1,0 +1,57 @@
+# ===============================================================================
+# This actions file uploads the UCADF-Core-Plugin artifact to an UrbanCode instance as a component version.
+# Required Properties:
+#   ucdUrl
+#   ucdAuthToken
+#   releasesDir
+#   pluginVersion
+# ===============================================================================
+# Run the actions.
+actions:
+  # ==================================================================================
+  # Validate the required properties exist.
+  # ==================================================================================
+  - action: UcAdfComment
+    actionInfo: false
+    comment: "releasesDir=%s"
+    values:
+      - "${u:releasesDir}"
+
+  # ==================================================================================
+  # Create the UCADF-Core-Plugin component version on the target instance.
+  # ==================================================================================
+  # If the component doesn't exist then create it.
+  - action: UcdGetComponent
+    component: "UCADF-Core-Plugin"
+    actionReturnPropertyName: "returnedPackageComponent"
+    failIfNotFound: false
+    
+  - action: UcAdfWhen
+    when: 'Eval(!"${u?:returnedPackageComponent/id}")'
+    actions:
+      # Create the component.
+      - action: UcdCreateComponent
+        name: "UCADF-Core-Plugin"
+        failIfExists: false
+
+      # Add the component to the Public team.    
+      - action: UcdAddComponentToTeams
+        component: "UCADF-Core-Plugin"
+        teams:
+          - team: "Public"
+
+  # Create the component version.
+  - action: UcdCreateVersion
+    component: "UCADF-Core-Plugin"
+    name: "${u:pluginVersion}"
+    actionReturnPropertyName: "versionCreated"
+    failIfExists: false
+    
+  # If the version was created then add files to the version.
+  - action: UcdAddVersionFiles
+    when: 'Eval("${u:versionCreated}" == "true")'
+    component: "UCADF-Core-Plugin"
+    version: "${u:pluginVersion}"
+    base: "${u:releasesDir}"
+    include:
+      - "UCADF-Core-Plugin-v${u:pluginVersion}.zip"
