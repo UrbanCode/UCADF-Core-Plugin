@@ -4,13 +4,12 @@
 	<name>UCADF-Core-Plugin</name>
 	<groupId>org.urbancode.ucadf</groupId>
 	<artifactId>UCADF-Core-Plugin</artifactId>
-	<version>0.0.29</version>
+	<version>1.0.0</version>
 
 	<url>http://maven.apache.org</url>
 	
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <ucMavenPluginVersion>1.0.13</ucMavenPluginVersion>
 	</properties>
 
 	<build> 
