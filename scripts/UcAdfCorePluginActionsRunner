@@ -31,6 +31,7 @@ packageVersionsArr=$(echo $packageVersions | tr "," "\n")
 packageVersionsDir="${AGENT_HOME}/var/work/UcAdfCorePluginDownloads"
 
 # The location of the agent libraries.
+# This is not used directly by this script but may be used in the sourced configuration files that add agent libraries to the classpath.
 agentLibDir="${AGENT_HOME}/lib"
 
 # Process each package version.
@@ -52,7 +53,7 @@ do
 	
 	# The location of the package version files.
 	ucAdfPackageDir="${packageVersionsDir}/${ucAdfPackageName}/${ucAdfPackageVersion}"
-	ucAdfPackageLog4jFile="${ucAdfPackageDir}/log4j.properties"
+	ucAdfPackageLog4jFile="${ucAdfPackageDir}/Library/log4j.properties"
 	ucAdfPackageConfigFile="${ucAdfPackageDir}/UcAdfConfig.properties"
 
 	echo "Looking for UCADF configuration files in [${ucAdfPackageDir}]."
@@ -72,9 +73,6 @@ do
 			else
 				ucAdfFullClasspath=${ucAdfFullClasspath}:${ucAdfClasspath}
 			fi
-			
-            ucAdfLog4jDir=`dirname "${ucAdfClasspath}"`
-            ucAdfPackageLog4jFile="${ucAdfLog4jDir}/log4j.properties"
 		fi
 	fi
 
@@ -95,7 +93,7 @@ set -u
 
 # Export the constructed classpath appended with the orignial CLASSPATH.
 if [ ! -z "${ucAdfFullClasspath}" ]; then
-	export CLASSPATH="${ucAdfFullClasspath}:${CLASSPATH}:${agentLibDir}/*"
+	export CLASSPATH="${ucAdfFullClasspath}:${CLASSPATH}"
 fi
 
 # Run the actions.
