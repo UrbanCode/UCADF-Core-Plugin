@@ -27,7 +27,7 @@ actions:
     failIfNotFound: false
     
   - action: UcAdfWhen
-    when: 'Eval(!"${u?:returnedPackageComponent/id}")'
+    when: '!"${u?:returnedPackageComponent/id}"'
     actions:
       # Create the component.
       - action: UcdCreateComponent
@@ -49,7 +49,7 @@ actions:
     
   # If the version was created then add files to the version.
   - action: UcdAddVersionFiles
-    when: 'Eval("${u:versionCreated}" == "true")'
+    when: '"${u:versionCreated}" == "true"'
     component: "UCADF-Core-Plugin"
     version: "${u:pluginVersion}"
     base: "${u:releasesDir}"
