@@ -53,7 +53,7 @@ do
 	
 	# The location of the package version files.
 	ucAdfPackageDir="${packageVersionsDir}/${ucAdfPackageName}/${ucAdfPackageVersion}"
-	ucAdfPackageLog4jFile="${ucAdfPackageDir}/Library/log4j.properties"
+	ucAdfPackageLog4jFile="${ucAdfPackageDir}/Library/log4j2.xml"
 	ucAdfPackageConfigFile="${ucAdfPackageDir}/UcAdfConfig.properties"
 
 	echo "Looking for UCADF configuration files in [${ucAdfPackageDir}]."
@@ -79,7 +79,7 @@ do
 	# Use the first log4j properties found.
 	if [ -f "$ucAdfPackageLog4jFile" ]; then
 		if [ -z "${log4jConfig}" ]; then
-			log4jConfig=-Dlog4j.configuration=file:"${ucAdfPackageLog4jFile}"
+			log4jConfig=-Dlog4j.configurationFile="${ucAdfPackageLog4jFile}"
 		fi
 	fi
 done
